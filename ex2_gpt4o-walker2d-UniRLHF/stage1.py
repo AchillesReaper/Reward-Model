@@ -52,7 +52,7 @@ def get_reduced_img_sequence(image_folder, num_images=20):
             result_path_list.append(image_paths_list[i])
     else:
         result_path_list = image_paths_list
-
+    print(f"Reduced image sequence to {len(result_path_list)} images from {len(image_paths_list)} original images.")
     return result_path_list
 
 
@@ -103,15 +103,17 @@ def pair_sequence_describe(round_id, round_data,):
         "round_data": {
             "left_description": left_description,
             "right_description": right_description,
-            "token_usage_left": {
-                "prompt_tokens": left_token_usage.prompt_tokens,
-                "completion_tokens": left_token_usage.completion_tokens,
-                "total_tokens": left_token_usage.total_tokens
-            },
-            "token_usage_right": {
-                "prompt_tokens": right_token_usage.prompt_tokens,
-                "completion_tokens": right_token_usage.completion_tokens,
-                "total_tokens": right_token_usage.total_tokens
+            'tk_usage_s1': {
+                "token_usage_left": {
+                    "prompt_tokens": left_token_usage.prompt_tokens,
+                    "completion_tokens": left_token_usage.completion_tokens,
+                    "total_tokens": left_token_usage.total_tokens
+                },
+                "token_usage_right": {
+                    "prompt_tokens": right_token_usage.prompt_tokens,
+                    "completion_tokens": right_token_usage.completion_tokens,
+                    "total_tokens": right_token_usage.total_tokens
+                }
             }
         }
     }
@@ -138,7 +140,7 @@ def predict():
         'task': exp_task,
         'image_list_length': exp_img_list_len,
         'total_epochs': len(annotation_data),
-        'prompt': exp_question_prompt
+        's1_prompt': exp_question_prompt
     }
     # Ensure the output directory exists
     if not os.path.exists(os.path.dirname(output_file)):
