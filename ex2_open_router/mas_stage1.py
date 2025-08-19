@@ -152,7 +152,7 @@ class Stage_1():
     def chat(self, messages):
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {API_KEY_REF}",
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
         payload = {
