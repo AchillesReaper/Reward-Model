@@ -7,7 +7,21 @@ expected ouput:
         "task": "walker2d-annotation",
         "image_list_length": 20,
         "total_epochs": 2,
-        "s1_prompt": "This sequence of images shows a abstract robot walking. Describe in detail how the robot is walking in terms of balance and how natural it looks."
+        "data_folder": "/home/hiho/Data/uni_rlhf_annotation/walker2d-medium-expert-v2_human_labels",
+        "model": {
+            "name": "google/gemma-3-12b-it:free",
+            "temperature": 0.7,
+            "max_tokens": 2048
+        },
+        "stage_1": {
+            "task": "walker2d-annotation",
+            "plan": "Given a sequence of images shows a abstract robot walking, describe in detail how the robot is walking in terms of balance and how natural it looks.",
+            "plan_token_usage": {
+                "prompt_tokens": 100,
+                "completion_tokens": 200,
+                "total_tokens": 300
+            }
+        }
     },
     "results":{
         "round_id": {
@@ -42,17 +56,19 @@ from api_key import apiKey_openRouter_1 as API_KEY_REF
 
 class Stage_1():
     def __init__(
-            self,
-            vlm_model          = "google/gemma-3-12b-it:free",
-            model_temperature  = 0.7,
-            max_tokens         = 2048,
-            exp_task_name      = "walker2d-annotation",
-            exp_task           = "Given a sequence of images shows a abstract robot walking, describe in detail how the robot is walking in terms of balance and how natural it looks.",
-            exp_image_list_len = 2,
-            exp_len            = 1,
-            trail_folder       = '/home/hiho/Data/uni_rlhf_annotation/walker2d-medium-expert-v2_human_labels',
+        self,
+        api_key            = API_KEY_REF,
+        vlm_model          = "google/gemma-3-12b-it:free",
+        model_temperature  = 0.7,
+        max_tokens         = 2048,
+        exp_task_name      = "walker2d-annotation",
+        exp_task           = "Given a sequence of images shows a abstract robot walking, describe in detail how the robot is walking in terms of balance and how natural it looks.",
+        exp_image_list_len = 2,
+        exp_len            = 1,
+        trail_folder       = '/home/hiho/Data/uni_rlhf_annotation/walker2d-medium-expert-v2_human_labels',
     ):
         # --- model parameters ---
+        self.api_key           = api_key
         self.vlm_model         = vlm_model
         self.model_temperature = model_temperature
         self.max_tokens        = max_tokens
@@ -79,6 +95,7 @@ class Stage_1():
             'task_name'         : self.exp_task_name,
             'image_list_length' : self.exp_img_list_len,
             'total_epochs'      : self.exp_len,
+            'data_folder'       : self.trail_folder,
             'model' : {
                 'name'       : self.vlm_model,
                 'temperature': self.model_temperature,
@@ -107,7 +124,11 @@ class Stage_1():
         )
 
         for item in parallel_results:
-            results[item['round_id']] = item['round_data']
+            # results[item['round_id']] = item['round_data']
+            results[item['round_id']] = {
+                **annotation_data[item['round_id']],
+                **item['round_data']
+            }
 
         # --- Save to output file ---
         with open(self.output_file, 'w') as f:
