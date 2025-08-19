@@ -1,0 +1,310 @@
+
+'''
+This script replace the black-bone model(gpt-4o) of the multi-agent system in `ex2_gpt4oMAS-walker2d-UniRLHF/stage1.py` with other free models from OpenRouter
+expected ouput:
+{
+    "meta_data": {
+        "task": "walker2d-annotation",
+        "image_list_length": 20,
+        "total_epochs": 2,
+        "s1_prompt": "This sequence of images shows a abstract robot walking. Describe in detail how the robot is walking in terms of balance and how natural it looks."
+    },
+    "results":{
+        "round_id": {
+            "left": number,
+            "right": number,
+            "human_label": -1|0|1,
+            "left_description": "description of the left sequence",
+            "right_description": "description of the right sequence"
+            "token_usage_left": {
+                "prompt_tokens": int,
+                "completion_tokens": int,
+                "total_tokens": int
+            },
+            "token_usage_right": {
+                "prompt_tokens": int,
+                "completion_tokens": int,
+                "total_tokens": int
+            }
+        }
+    }
+}
+'''
+import sys, os, json, base64, requests
+from PIL import Image
+from termcolor import cprint
+from joblib import Parallel, delayed
+from itertools import islice
+from io import BytesIO
+from tqdm import tqdm
+
+from api_key import apiKey_openRouter_1 as API_KEY_REF
+
+class Stage_1():
+    def __init__(
+            self,
+            vlm_model          = "google/gemma-3-12b-it:free",
+            model_temperature  = 0.7,
+            max_tokens         = 2048,
+            exp_task_name      = "walker2d-annotation",
+            exp_task           = "Given a sequence of images shows a abstract robot walking, describe in detail how the robot is walking in terms of balance and how natural it looks.",
+            exp_image_list_len = 2,
+            exp_len            = 1,
+            trail_folder       = '/home/hiho/Data/uni_rlhf_annotation/walker2d-medium-expert-v2_human_labels',
+    ):
+        # --- model parameters ---
+        self.vlm_model         = vlm_model
+        self.model_temperature = model_temperature
+        self.max_tokens        = max_tokens
+        # --- experiment parameters ---
+        self.exp_task_name     = exp_task_name
+        self.exp_task          = exp_task
+        self.exp_img_list_len  = exp_image_list_len
+        self.exp_len           = exp_len
+        self.trail_folder      = trail_folder
+
+        self.output_file       = f'./ex2_open_router/{self.vlm_model.replace("/", "-").replace(":", "-")}/output/mas_s1_{self.exp_task_name}.json'
+        if not os.path.exists(os.path.dirname(self.output_file)):
+            os.makedirs(os.path.dirname(self.output_file))
+
+
+    def predict(self):
+        self.planner_agent()
+        if not self.plan:
+            cprint("No plan generated. Exiting...", 'red')
+            sys.exit(1)
+
+        cprint(f"Plan generated, and saved to {self.plan_save_url}", 'green')
+        meta_data = {
+            'task_name'         : self.exp_task_name,
+            'image_list_length' : self.exp_img_list_len,
+            'total_epochs'      : self.exp_len,
+            'model' : {
+                'name'       : self.vlm_model,
+                'temperature': self.model_temperature,
+                'max_tokens' : self.max_tokens
+            },
+            'stage_1' : {
+                'task'  : self.exp_task,
+                'plan'  : self.plan,
+                'plan_token_usage': self.plan_token_usage
+            }
+        }
+
+        # --- get the annotation data ---
+        with open(f'{self.trail_folder}/annotation.json', 'rb') as f:
+            annotation_data = json.load(f)
+            f.close()
+        if self.exp_len > len(annotation_data):
+            cprint(f"Not enough annotation data available. Required: {self.exp_len}, Available: {len(annotation_data)}", 'red')
+            sys.exit(1)
+
+        # --- Process each image sequence pair and generate description
+        results = {}
+        parallel_results = Parallel(n_jobs=-1, backend='multiprocessing')(
+            delayed(self.pair_sequence_describe)(round_id, round_data)
+            for round_id, round_data in tqdm(islice(annotation_data.items(), self.exp_len), desc="Processing sequences", total=self.exp_len)
+        )
+
+        for item in parallel_results:
+            results[item['round_id']] = item['round_data']
+
+        # --- Save to output file ---
+        with open(self.output_file, 'w') as f:
+            json.dump({
+                'meta_data': meta_data,
+                'results': results
+            }, f, indent=4)
+            f.close()
+        cprint(f"Descriptions saved to {self.output_file}", 'green')
+
+        # --- clean up ---
+        # if hasattr(self, 'plan_save_url') and os.path.exists(self.plan_save_url):
+        #     os.remove(self.plan_save_url)
+        # if hasattr(self, 'research_save_url') and os.path.exists(self.research_save_url):
+        #     os.remove(self.research_save_url)
+        # if hasattr(self, 'critic_save_url') and os.path.exists(self.critic_save_url):
+        #     os.remove(self.critic_save_url)
+        # cprint(f"Cleaned up temporary files.", 'green')
+
+
+    def chat(self, messages):
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {API_KEY_REF}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            'model'       : self.vlm_model,
+            'messages'    : messages,
+            'max_tokens'  : self.max_tokens,
+            'temperature' : self.model_temperature,
+        }
+        response = requests.post(url, headers=headers, json=payload)
+        try:
+            response_content = response.json()['choices'][0]['message']['content']
+            token_usage      = response.json()['usage']
+            return {'response': response_content, 'token_usage': token_usage}
+        except Exception as e:
+            cprint(messages, 'red')
+            sys.exit(f"API error: {str(e)}")
+
+
+    # ------------------ Multi Agent System ------------------
+    def planner_agent(self):
+        # messages = [
+        #     {"role": "user", "content": [
+        #         {"type": "text", "text": "You are a Planner agent. Break down the complex task into steps."},
+        #         {"type": "text", "text": f"The task is: {self.exp_task}"},
+        #     ]}
+        # ]
+        messages = [
+            {"role": "system", "content": "You are a Planner agent, good at breaking down the complex task into steps."},
+            {"role": "user", "content": [
+                {"type": "text", "text": f"The task is: {self.exp_task}"},
+            ]}
+        ]
+        plan                  = self.chat(messages)
+        self.plan             = plan['response']
+        self.plan_token_usage = plan['token_usage']
+
+        self.plan_save_url = self.output_file.replace('.json', '_plan.txt')
+        with open(self.plan_save_url, 'w') as f:
+            f.write(self.plan)
+        return self.plan
+
+
+    def researcher_agent(self, image_parts):
+        messages = [
+            {"role": "system", "content": "You are a Researcher agent. Provide factual, detailed answers to specific questions or sub-tasks."},
+            {"role": "user", "content": [
+                {"type": "text", "text": f"Please research and elaborate on: {self.plan}"},
+                *image_parts
+            ]},
+        ]
+        research_result = self.chat(messages)
+        self.research_save_url = self.output_file.replace('.json', '_research.txt')
+        if not os.path.exists(self.research_save_url):
+            open_mode = 'w'
+        else:
+            open_mode = 'a'
+        with open(self.research_save_url, open_mode) as f:
+            f.write(research_result['response'] + '\n')
+            f.write("#----" * 40 + '\n')
+            f.close()
+        return research_result
+
+
+    def critic_agent(self, research_output):
+        messages = [
+            {"role": "system", "content": "You are a Critic agent. Evaluate the reasoning and outputs of multiple agents. Provide a refined answer."},
+            {"role": "user", "content": f"""
+                The original task was: {self.exp_task}
+                The plan was:
+                {self.plan}
+                The research outputs were:
+                {research_output}
+
+                Please assess the reasoning, and give a refined and well-structured final answer.
+                """
+            }
+        ]
+        critic_result = self.chat(messages)
+        self.critic_save_url = self.output_file.replace('.json', '_critic.txt')
+        with open(self.critic_save_url, 'w') as f:
+            f.write(critic_result['response'] + '\n')
+            f.write("#----" * 40 + '\n')
+            f.close()
+        return critic_result
+
+
+    #  ------------------ Helper functions ------------------ 
+    def image_to_base64(self, image_path):
+        with Image.open(image_path) as img:
+            # buffered = BytesIO()
+            # img.save(buffered, format="PNG")
+            # return base64.b64encode(buffered.getvalue()).decode("utf-8")
+            with open(image_path, "rb") as image_file:
+                base64_img = base64.b64encode(image_file.read()).decode('utf-8')
+                img_url = f"data:image/png;base64,{base64_img}"
+            return img_url
+
+
+    def get_reduced_img_sequence(self, img_folder_path):
+        """Get a reduced sequence of images from the folder."""
+        image_paths_list = [os.path.join(img_folder_path, img) for img in sorted(os.listdir(img_folder_path)) if img.endswith(('.png', '.jpg', '.jpeg'))]
+        result_path_list = []
+        if len(image_paths_list) > self.exp_img_list_len:
+            step = len(image_paths_list) // self.exp_img_list_len
+            for i in range(0, len(image_paths_list), step):
+                result_path_list.append(image_paths_list[i])
+        else:
+            result_path_list = image_paths_list
+        cprint(f"Reduced image sequence to {len(result_path_list)} images from {len(image_paths_list)} original images.", 'green')
+        return result_path_list
+
+
+    #  ------------------ controling functions ------------------ 
+    def single_sequence_describe(self, img_folder_path):
+        # ---- prepare the image parts ----
+        image_path_list = self.get_reduced_img_sequence(img_folder_path)
+
+        image_parts = []
+        # Convert all images to OpenAI vision format
+        for img_path in image_path_list:
+            # base64_img = self.image_to_base64(img_path)
+            image_parts.append({
+                "type"      : "image_url",
+                "image_url" : {
+                    "url": self.image_to_base64(img_path)
+                }
+            })
+        total_prompt_tokens     = 0
+        total_completion_tokens = 0
+
+        research_result = self.researcher_agent(image_parts)
+        research_output = research_result['response']
+        total_prompt_tokens     += research_result['token_usage']['prompt_tokens']
+        total_completion_tokens += research_result['token_usage']['completion_tokens']
+        cprint(f'Research output is generated and saved to {self.research_save_url}', 'green')
+
+        critic_result = self.critic_agent(research_output)
+        total_prompt_tokens     += critic_result['token_usage']['prompt_tokens']
+        total_completion_tokens += critic_result['token_usage']['completion_tokens']
+        cprint(f'Critic output is generated and saved to {self.critic_save_url}', 'green')
+
+        return {
+            "research_outputs"        : research_output,
+            "final_output"            : critic_result['response'],
+            "total_prompt_tokens"     : total_prompt_tokens,
+            "total_completion_tokens" : total_completion_tokens
+        }
+
+
+    def pair_sequence_describe(self, round_id, round_data):
+        epoch_left_folder  = f'{self.trail_folder}/extract/l_{round_data["left"]}'
+        epoch_right_folder = f'{self.trail_folder}/extract/r_{round_data["right"]}'
+
+        left_description   = self.single_sequence_describe(epoch_left_folder)
+        right_description  = self.single_sequence_describe(epoch_right_folder)
+
+        return {
+            "round_id": round_id,
+            "round_data": {
+                "left_research_outputs"     : left_description["research_outputs"],
+                "left_description"          : left_description["final_output"],
+                "right_research_outputs"    : right_description["research_outputs"],
+                "right_description"         : right_description["final_output"],
+                'tk_usage_s1': {
+                    "token_usage_left": {
+                        "prompt_tokens"     : left_description["total_prompt_tokens"],
+                        "completion_tokens" : left_description["total_completion_tokens"],
+                    },
+                    "token_usage_right": {
+                        "prompt_tokens"     : right_description["total_prompt_tokens"],
+                        "completion_tokens" : right_description["total_completion_tokens"],
+                    }
+                }
+            }
+        }
+    
