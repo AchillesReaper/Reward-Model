@@ -17,10 +17,11 @@ model_list = [
 
 vlm_model = model_list[0]
 stage1 = Stage_1(
-    vlm_model=vlm_model,
-    exp_image_list_len=10,
-    exp_len=2000,
-    trail_num='t-6'
+    vlm_model          = vlm_model,
+    provider_id        = "DeepInfra",
+    exp_image_list_len = 10,
+    exp_len            = 2000,
+    trail_num          = 't-6',
 )
 stage1.predict()
 

@@ -94,6 +94,7 @@ class Stage_1():
         self,
         api_key            = API_KEY_REF,
         vlm_model          = "google/gemma-3-12b-it:free",
+        provider_id        = "DeepInfra",
         model_temperature  = 0.7,
         max_tokens         = 2048,
         exp_task_name      = "walker2d-annotation",
@@ -106,6 +107,7 @@ class Stage_1():
         # --- model parameters ---
         self.api_key           = api_key
         self.vlm_model         = vlm_model
+        self.provider_id       = provider_id
         self.model_temperature = model_temperature
         self.max_tokens        = max_tokens
         # --- experiment parameters ---
@@ -193,6 +195,7 @@ class Stage_1():
         }
         payload = {
             'model'       : self.vlm_model,
+            'provider_id' : self.provider_id,
             'messages'    : messages,
             'max_tokens'  : self.max_tokens,
             'temperature' : self.model_temperature,
