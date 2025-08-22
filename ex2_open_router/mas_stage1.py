@@ -52,7 +52,42 @@ from itertools import islice
 from io import BytesIO
 from tqdm import tqdm
 
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field, field_validator
+from typing import Literal, List
+
 from api_key import apiKey_openRouter_1 as API_KEY_REF
+
+
+class PlannerOutput(BaseModel):
+    task: str = Field(..., description="The main task description.")
+    steps: List[str] = Field(..., description="A list of steps produced by the planner agent.")
+
+    @property
+    def step_count(self) -> int:
+        """Returns the number of steps."""
+        return len(self.steps)
+
+
+class ResearcherOutput(BaseModel):
+    sub_task: str = Field(..., description="The subtask description.")
+    findings: List[str] = Field(..., description="A list of findings produced by the researcher agent.")
+
+    @property
+    def finding_count(self) -> int:
+        """Returns the number of findings."""
+        return len(self.findings)
+
+
+class CriticOutput(BaseModel):
+    task: str = Field(..., description="The main task description.")
+    critiques: List[str] = Field(..., description="A list of critiques produced by the critic agent.")
+
+    @property
+    def critique_count(self) -> int:
+        """Returns the number of critiques."""
+        return len(self.critiques)
+
 
 class Stage_1():
     def __init__(
@@ -66,6 +101,7 @@ class Stage_1():
         exp_image_list_len = 2,
         exp_len            = 1,
         trail_folder       = '/home/hiho/Data/uni_rlhf_annotation/walker2d-medium-expert-v2_human_labels',
+        trail_num          = 't-1'
     ):
         # --- model parameters ---
         self.api_key           = api_key
@@ -79,9 +115,13 @@ class Stage_1():
         self.exp_len           = exp_len
         self.trail_folder      = trail_folder
 
-        self.output_file       = f'./ex2_open_router/{self.vlm_model.replace("/", "-").replace(":", "-")}/output/mas_s1_{self.exp_task_name}.json'
+        self.output_file       = f'./ex2_open_router/{self.vlm_model.replace("/", "-").replace(":", "-")}/output/{trail_num}/mas_s1_{self.exp_task_name}.json'
         if not os.path.exists(os.path.dirname(self.output_file)):
             os.makedirs(os.path.dirname(self.output_file))
+
+        parser = PydanticOutputParser(pydantic_object=PlannerOutput)
+        format_instructions = parser.get_format_instructions()
+        self.exp_task += "\n-----\n" + format_instructions
 
 
     def predict(self):
@@ -90,7 +130,6 @@ class Stage_1():
             cprint("No plan generated. Exiting...", 'red')
             sys.exit(1)
 
-        cprint(f"Plan generated, and saved to {self.plan_save_url}", 'green')
         meta_data = {
             'task_name'         : self.exp_task_name,
             'image_list_length' : self.exp_img_list_len,
@@ -104,7 +143,6 @@ class Stage_1():
             'stage_1' : {
                 'task'  : self.exp_task,
                 'plan'  : self.plan,
-                'plan_token_usage': self.plan_token_usage
             }
         }
 
@@ -118,19 +156,26 @@ class Stage_1():
 
         # --- Process each image sequence pair and generate description
         results = {}
-        parallel_results = Parallel(n_jobs=-1, backend='multiprocessing')(
+        parallel_results = Parallel(n_jobs=8, backend='multiprocessing')(
             delayed(self.pair_sequence_describe)(round_id, round_data)
             for round_id, round_data in tqdm(islice(annotation_data.items(), self.exp_len), desc="Processing sequences", total=self.exp_len)
         )
-
-        for item in parallel_results:
-            # results[item['round_id']] = item['round_data']
-            results[item['round_id']] = {
-                **annotation_data[item['round_id']],
-                **item['round_data']
-            }
-
+        
         # --- Save to output file ---
+        # find the saved temp round_result in the output doc dictionary
+        result_file_prefix = self.output_file.replace('.json', '_round_result_')
+        temp_round_results_list = [entry.path for entry in os.scandir(os.path.dirname(self.output_file)) if entry.path.startswith(result_file_prefix)]
+
+        for path in temp_round_results_list:
+            with open(path, 'r') as f:
+                temp_round_result = json.load(f)
+                round_id = temp_round_result['round_id']
+                results[round_id] = {
+                    **annotation_data[round_id],
+                    **temp_round_result['round_data']
+                }
+                f.close()
+
         with open(self.output_file, 'w') as f:
             json.dump({
                 'meta_data': meta_data,
@@ -138,15 +183,6 @@ class Stage_1():
             }, f, indent=4)
             f.close()
         cprint(f"Descriptions saved to {self.output_file}", 'green')
-
-        # --- clean up ---
-        # if hasattr(self, 'plan_save_url') and os.path.exists(self.plan_save_url):
-        #     os.remove(self.plan_save_url)
-        # if hasattr(self, 'research_save_url') and os.path.exists(self.research_save_url):
-        #     os.remove(self.research_save_url)
-        # if hasattr(self, 'critic_save_url') and os.path.exists(self.critic_save_url):
-        #     os.remove(self.critic_save_url)
-        # cprint(f"Cleaned up temporary files.", 'green')
 
 
     def chat(self, messages):
@@ -167,84 +203,110 @@ class Stage_1():
             token_usage      = response.json()['usage']
             return {'response': response_content, 'token_usage': token_usage}
         except Exception as e:
-            cprint(messages, 'red')
+            cprint(f"Error in response: {response.text}", 'red')
             sys.exit(f"API error: {str(e)}")
 
 
+    def parse_response(self, agent_type: str, raw_response: str):
+        try:
+            json_start   = raw_response.index('{')
+            json_end     = raw_response.index('}') + 1
+            json_str     = raw_response[json_start:json_end]
+            match agent_type:
+                case 'planner':
+                    parsed_response = PlannerOutput.model_validate(json.loads(json_str))
+                case 'researcher':
+                    parsed_response = ResearcherOutput.model_validate(json.loads(json_str))
+                case 'critic':
+                    parsed_response = CriticOutput.model_validate(json.loads(json_str))
+                case _:
+                    cprint(f"Unknown agent type: {agent_type}", 'red')
+                    sys.exit(1)
+        except Exception as e:
+            cprint(f"Error parsing response for {agent_type}: {str(e)}", 'red')
+            cprint(f"Raw response: {raw_response}", 'red')
+            sys.exit(1)
+        return parsed_response.model_dump()
+
+
     # ------------------ Multi Agent System ------------------
+    def save_temp_result(self, agent_type: str, result: dict, round_id=None, side=None):
+        match agent_type:
+            case 'planner':
+                temp_result_file = self.output_file.replace('.json', f'_{agent_type}.json')
+
+            case 'critic' | 'round_result':
+                temp_result_file = self.output_file.replace('.json', f'_{agent_type}_{round_id}.json')
+               
+            case 'researcher':
+                temp_result_file = self.output_file.replace('.json', f'_{agent_type}_{round_id}_{side}.json')
+
+            case _:
+                cprint(f"Unknown agent type: {agent_type}", 'red')
+                sys.exit(1)
+
+        with open(temp_result_file, 'w') as f:
+            json.dump(result, f, indent=4)
+            cprint(f"Temporary results saved to {temp_result_file}", 'green')
+            f.close()
+
+
     def planner_agent(self):
-        # messages = [
-        #     {"role": "user", "content": [
-        #         {"type": "text", "text": "You are a Planner agent. Break down the complex task into steps."},
-        #         {"type": "text", "text": f"The task is: {self.exp_task}"},
-        #     ]}
-        # ]
         messages = [
             {"role": "system", "content": "You are a Planner agent, good at breaking down the complex task into steps."},
             {"role": "user", "content": [
                 {"type": "text", "text": f"The task is: {self.exp_task}"},
             ]}
         ]
-        plan                  = self.chat(messages)
-        self.plan             = plan['response']
-        self.plan_token_usage = plan['token_usage']
+        plan = self.chat(messages)
+        plan['response'] = self.parse_response('planner', plan['response'])
+        self.save_temp_result('planner', plan)
 
-        self.plan_save_url = self.output_file.replace('.json', '_plan.txt')
-        with open(self.plan_save_url, 'w') as f:
-            f.write(self.plan)
+        self.plan             = plan
+        self.plan_token_usage = plan['token_usage']
+        # sys.exit(0)  # Exit after generating the plan
         return self.plan
 
 
-    def researcher_agent(self, image_parts):
+    def researcher_agent(self, step, image_parts):
+        parser = PydanticOutputParser(pydantic_object=ResearcherOutput)
+        format_instructions = parser.get_format_instructions()
         messages = [
             {"role": "system", "content": "You are a Researcher agent. Provide factual, detailed answers to specific questions or sub-tasks."},
             {"role": "user", "content": [
-                {"type": "text", "text": f"Please research and elaborate on: {self.plan}"},
-                *image_parts
+                {"type": "text", "text": f"The main task is: {self.plan['response']['task']}"},
+                {"type": "text", "text": f"Please research and elaborate on the subtask: {step}"},
+                *image_parts,
+                {"type": "text", "text": format_instructions}
             ]},
         ]
         research_result = self.chat(messages)
-        self.research_save_url = self.output_file.replace('.json', '_research.txt')
-        if not os.path.exists(self.research_save_url):
-            open_mode = 'w'
-        else:
-            open_mode = 'a'
-        with open(self.research_save_url, open_mode) as f:
-            f.write(research_result['response'] + '\n')
-            f.write("#----" * 40 + '\n')
-            f.close()
+        research_result['response'] = self.parse_response('researcher', research_result['response'])
         return research_result
 
 
-    def critic_agent(self, research_output):
+    def critic_agent(self, research_outputs):
+        parser = PydanticOutputParser(pydantic_object=CriticOutput)
+        format_instructions = parser.get_format_instructions()
         messages = [
             {"role": "system", "content": "You are a Critic agent. Evaluate the reasoning and outputs of multiple agents. Provide a refined answer."},
-            {"role": "user", "content": f"""
-                The original task was: {self.exp_task}
-                The plan was:
-                {self.plan}
-                The research outputs were:
-                {research_output}
-
-                Please assess the reasoning, and give a refined and well-structured final answer.
-                """
+            {"role": "user", "content": [
+                {'type': 'text', 'text': f"The main task is: {self.plan['response']['task']}"},
+                {'type': 'text', 'text': f"The plan was: {self.plan['response']['steps']}"},
+                {'type': 'text', 'text': f"The research outputs were: {research_outputs}"},
+                {'type': 'text', 'text': "Please assess the research outputs, and give a refined and well-structured final answer."},
+                {'type': 'text', 'text': format_instructions}
+            ]
             }
         ]
         critic_result = self.chat(messages)
-        self.critic_save_url = self.output_file.replace('.json', '_critic.txt')
-        with open(self.critic_save_url, 'w') as f:
-            f.write(critic_result['response'] + '\n')
-            f.write("#----" * 40 + '\n')
-            f.close()
+        critic_result['response'] = self.parse_response('critic', critic_result['response'])
         return critic_result
 
 
     #  ------------------ Helper functions ------------------ 
     def image_to_base64(self, image_path):
         with Image.open(image_path) as img:
-            # buffered = BytesIO()
-            # img.save(buffered, format="PNG")
-            # return base64.b64encode(buffered.getvalue()).decode("utf-8")
             with open(image_path, "rb") as image_file:
                 base64_img = base64.b64encode(image_file.read()).decode('utf-8')
                 img_url = f"data:image/png;base64,{base64_img}"
@@ -269,34 +331,35 @@ class Stage_1():
     def single_sequence_describe(self, img_folder_path):
         # ---- prepare the image parts ----
         image_path_list = self.get_reduced_img_sequence(img_folder_path)
-
         image_parts = []
         # Convert all images to OpenAI vision format
         for img_path in image_path_list:
-            # base64_img = self.image_to_base64(img_path)
             image_parts.append({
                 "type"      : "image_url",
                 "image_url" : {
                     "url": self.image_to_base64(img_path)
                 }
             })
+        
+        # --- Research Phase ---
+        research_outputs = []
         total_prompt_tokens     = 0
         total_completion_tokens = 0
-
-        research_result = self.researcher_agent(image_parts)
-        research_output = research_result['response']
-        total_prompt_tokens     += research_result['token_usage']['prompt_tokens']
-        total_completion_tokens += research_result['token_usage']['completion_tokens']
-        cprint(f'Research output is generated and saved to {self.research_save_url}', 'green')
-
-        critic_result = self.critic_agent(research_output)
+        for i, step in enumerate(self.plan['response']['steps']):
+            research_out = self.researcher_agent(step, image_parts)
+            research_outputs.append(research_out['response'])
+            total_prompt_tokens     += research_out['token_usage']['prompt_tokens']
+            total_completion_tokens += research_out['token_usage']['completion_tokens']
+        
+        # --- Critique Phase ---
+        critic_result = self.critic_agent(research_outputs)
         total_prompt_tokens     += critic_result['token_usage']['prompt_tokens']
         total_completion_tokens += critic_result['token_usage']['completion_tokens']
-        cprint(f'Critic output is generated and saved to {self.critic_save_url}', 'green')
+
 
         return {
-            "research_outputs"        : research_output,
-            "final_output"            : critic_result['response'],
+            "research_outputs"        : research_outputs,
+            "final_output"            : critic_result['response']['critiques'],
             "total_prompt_tokens"     : total_prompt_tokens,
             "total_completion_tokens" : total_completion_tokens
         }
@@ -309,14 +372,14 @@ class Stage_1():
         left_description   = self.single_sequence_describe(epoch_left_folder)
         right_description  = self.single_sequence_describe(epoch_right_folder)
 
-        return {
+        round_result = {
             "round_id": round_id,
             "round_data": {
                 "left_research_outputs"     : left_description["research_outputs"],
                 "left_description"          : left_description["final_output"],
                 "right_research_outputs"    : right_description["research_outputs"],
                 "right_description"         : right_description["final_output"],
-                'tk_usage_s1': {
+                'round_tk_usage': {
                     "token_usage_left": {
                         "prompt_tokens"     : left_description["total_prompt_tokens"],
                         "completion_tokens" : left_description["total_completion_tokens"],
@@ -328,4 +391,5 @@ class Stage_1():
                 }
             }
         }
-    
+        self.save_temp_result('round_result', round_result, round_id)
+        return round_result 
