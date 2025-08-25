@@ -101,6 +101,7 @@ class Stage_1():
         exp_task           = "Given a sequence of images shows a abstract robot walking, describe in detail how the robot is walking in terms of balance and how natural it looks.",
         exp_image_list_len = 2,
         exp_len            = 1,
+        resume_idx         = 0,             # in case of interruption
         trail_folder       = '/home/hiho/Data/uni_rlhf_annotation/walker2d-medium-expert-v2_human_labels',
         trail_num          = 't-1'
     ):
@@ -115,6 +116,7 @@ class Stage_1():
         self.exp_task          = exp_task
         self.exp_img_list_len  = exp_image_list_len
         self.exp_len           = exp_len
+        self.resume_idx        = resume_idx
         self.trail_folder      = trail_folder
 
         self.output_file       = f'./ex2_open_router/{self.vlm_model.replace("/", "-").replace(":", "-")}/output/{trail_num}/mas_s1_{self.exp_task_name}.json'
@@ -127,10 +129,15 @@ class Stage_1():
 
 
     def predict(self):
-        self.planner_agent()
-        if not self.plan:
-            cprint("No plan generated. Exiting...", 'red')
-            sys.exit(1)
+        if self.resume_idx == 0:
+            self.planner_agent()
+            if not self.plan:
+                cprint("No plan generated. Exiting...", 'red')
+                sys.exit(1)
+        else:
+            with open(self.output_file.replace('.json', '_planner.json'), 'r') as f:
+                self.plan = json.load(f)
+                f.close()
 
         meta_data = {
             'task_name'         : self.exp_task_name,
@@ -155,12 +162,18 @@ class Stage_1():
         if self.exp_len > len(annotation_data):
             cprint(f"Not enough annotation data available. Required: {self.exp_len}, Available: {len(annotation_data)}", 'red')
             sys.exit(1)
+        if self.resume_idx > 0:
+            for i in range(self.resume_idx):
+                del annotation_data[f'r_{i}']
+
+
 
         # --- Process each image sequence pair and generate description
         results = {}
-        parallel_results = Parallel(n_jobs=8, backend='multiprocessing')(
+        total_len = self.exp_len-self.resume_idx
+        parallel_results = Parallel(n_jobs=2, backend='multiprocessing')(
             delayed(self.pair_sequence_describe)(round_id, round_data)
-            for round_id, round_data in tqdm(islice(annotation_data.items(), self.exp_len), desc="Processing sequences", total=self.exp_len)
+            for round_id, round_data in tqdm(islice(annotation_data.items(), total_len), desc="Processing sequences", total=total_len)
         )
         
         # --- Save to output file ---
@@ -225,11 +238,20 @@ class Stage_1():
                 case _:
                     cprint(f"Unknown agent type: {agent_type}", 'red')
                     sys.exit(1)
+            return parsed_response.model_dump()
         except Exception as e:
             cprint(f"Error parsing response for {agent_type}: {str(e)}", 'red')
             cprint(f"Raw response: {raw_response}", 'red')
-            sys.exit(1)
-        return parsed_response.model_dump()
+            response_error_log_url = self.output_file.replace('.json', f'_{agent_type}_error_log.json')
+            if not os.path.exists(response_error_log_url):
+                with open(response_error_log_url, 'w') as f:
+                    f.write(raw_response)
+                    f.close()
+            else:
+                with open(response_error_log_url, 'a') as f:
+                    f.write(raw_response)
+                    f.close()
+            return {'error': raw_response, 'message': str(e)}
 
 
     # ------------------ Multi Agent System ------------------

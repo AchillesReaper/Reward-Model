@@ -22,6 +22,7 @@ stage1 = Stage_1(
     exp_image_list_len = 10,
     exp_len            = 2000,
     trail_num          = 't-6',
+    resume_idx         = 278
 )
 stage1.predict()
 
