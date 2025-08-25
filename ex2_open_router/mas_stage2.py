@@ -69,8 +69,8 @@ class Stage_2():
         format_instructions = parser.get_format_instructions()
         self.s2_task += f"\n------\n{format_instructions}"
 
-        self.output_file       = f'./ex2_open_router/{self.vlm_model.replace("/", "-").replace(":", "-")}/output/mas_s2_{self.exp_task_name}.json'
-
+        # self.output_file       = f'./ex2_open_router/{self.vlm_model.replace("/", "-").replace(":", "-")}/output/mas_s2_{self.exp_task_name}.json'
+        self.output_file       = self.s1_data_file.replace('mas_s1_', 'mas_s2_')
 
     def predict(self):
         with open(self.s1_data_file, 'r') as f:
@@ -79,7 +79,7 @@ class Stage_2():
 
         # --- Process each image pair and generate predictions ---
         results = {}
-        parallel_results = Parallel(n_jobs=-1, backend='multiprocessing')(
+        parallel_results = Parallel(n_jobs=4, backend='multiprocessing')(
             delayed(self.compare_single_pair)(
                 round_id, 
                 {
@@ -179,5 +179,3 @@ class Stage_2():
             cprint(f'response:\n {response.text}', 'blue')
             sys.exit(f"API error: {str(e)}")
 
-s2 = Stage_2()
-s2.predict()
