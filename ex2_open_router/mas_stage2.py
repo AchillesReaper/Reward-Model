@@ -24,6 +24,7 @@ from typing import Literal, List
 from termcolor import cprint
 from joblib import Parallel, delayed
 from tqdm import tqdm
+import pandas as pd
 
 from api_key import apiKey_openRouter_1 as API_KEY_REF
 
@@ -71,6 +72,7 @@ class Stage_2():
 
         # self.output_file       = f'./ex2_open_router/{self.vlm_model.replace("/", "-").replace(":", "-")}/output/mas_s2_{self.exp_task_name}.json'
         self.output_file       = self.s1_data_file.replace('mas_s1_', 'mas_s2_')
+
 
     def predict(self):
         with open(self.s1_data_file, 'r') as f:
@@ -156,7 +158,6 @@ class Stage_2():
         }
 
 
-
     def chat(self, messages):
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
@@ -179,3 +180,51 @@ class Stage_2():
             cprint(f'response:\n {response.text}', 'blue')
             sys.exit(f"API error: {str(e)}")
 
+
+    def evaluate(self):
+        '''calaulate the accuracy'''
+        if self.output_file is None or not os.path.exists(self.output_file):
+            sys.exit("Output file not found. Please run prediction first.")
+        
+        eval_output = []
+        with open(self.output_file, 'r') as f:
+            s2_data = json.load(f)
+            s2_results = s2_data['results']
+            for trail in s2_results:
+                human_label = s2_results[trail]['human_label']
+                model_label = s2_results[trail]['choice']
+                score = 1 if human_label == model_label else 0
+                eval_output.append({
+                    'trail': trail,
+                    'human_label': human_label,
+                    'model_label': model_label,
+                    'score': score
+                })
+            f.close()
+        
+        human_label_set = set([item['human_label'] for item in eval_output])
+        prediction_summary = {}
+        for label in human_label_set:
+            prediction_summary[label] = {
+                'gt_amount': sum([item['human_label'] == label for item in eval_output]),
+                'predicted_amount': sum([item['model_label'] == label for item in eval_output]),
+                'correct_amount': sum([item['score'] == 1 for item in eval_output if item['human_label'] == label])
+            }
+
+        accuracy = sum([item['score'] for item in eval_output]) / len(eval_output)
+        cprint(f"Accuracy: {accuracy:.2f}", 'green')
+
+        df = pd.DataFrame(prediction_summary).T
+        df = df.sort_index(ascending=True)
+        print(df)
+
+        report = {
+            'accuracy': accuracy,
+            'prediction_summary': prediction_summary,
+            'eval_output': eval_output
+        }
+
+        eval_output_file = self.output_file.replace("mas_s2", "mas_s2_eval")
+        with open(eval_output_file, 'w') as f:
+            json.dump(report, f, indent=4)
+            cprint(f"Results saved to {eval_output_file}", 'green')

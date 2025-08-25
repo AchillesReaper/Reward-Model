@@ -16,18 +16,23 @@ model_list = [
 ]
 
 vlm_model = model_list[0]
+
+# --- stage 1 ---
 stage1 = Stage_1(
     vlm_model          = vlm_model,
     provider_id        = "DeepInfra",
     exp_image_list_len = 10,
     exp_len            = 2000,
     trail_num          = 't-6',
-    resume_idx         = 278
+    # resume_idx         = 278
 )
-stage1.predict()
+# stage1.predict()
 
-# stage2 = Stage_2(
-#     vlm_model=vlm_model,
-#     s1_data_file=stage1.output_file,
-# )
+# --- stage 2 ---
+stage2 = Stage_2(
+    vlm_model    = vlm_model,
+    max_tokens   = 1024,
+    s1_data_file = stage1.output_file,
+)
 # stage2.predict()
+stage2.evaluate()
