@@ -1,0 +1,380 @@
+{
+    "r_0": {
+        "round_name": "08_23_17_48_00__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_1": {
+        "round_name": "08_23_17_48_00__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_2": {
+        "round_name": "08_23_17_49_35__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_3": {
+        "round_name": "08_23_17_49_35__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_4": {
+        "round_name": "08_23_17_55_59__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_5": {
+        "round_name": "08_23_17_55_59__red_light__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_6": {
+        "round_name": "08_23_18_02_12__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_7": {
+        "round_name": "08_23_18_02_12__vehicle_blocked__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_8": {
+        "round_name": "08_23_18_07_07__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_9": {
+        "round_name": "08_23_18_10_18__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_10": {
+        "round_name": "08_23_18_12_31__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_11": {
+        "round_name": "08_23_18_13_23__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_12": {
+        "round_name": "08_23_18_14_13__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_13": {
+        "round_name": "08_23_18_15_15__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_14": {
+        "round_name": "08_23_18_15_15__red_light__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_15": {
+        "round_name": "08_23_18_17_36__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_16": {
+        "round_name": "08_23_18_17_36__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_17": {
+        "round_name": "08_23_18_20_03__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_18": {
+        "round_name": "08_23_18_20_03__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_19": {
+        "round_name": "08_23_18_24_02__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_20": {
+        "round_name": "08_23_18_24_02__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_21": {
+        "round_name": "08_23_18_25_12__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_22": {
+        "round_name": "08_23_18_25_12__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_23": {
+        "round_name": "08_23_18_26_25__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_24": {
+        "round_name": "08_23_18_26_25__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_25": {
+        "round_name": "08_23_18_27_35__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_26": {
+        "round_name": "08_23_18_27_57__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_27": {
+        "round_name": "08_23_18_28_19__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_28": {
+        "round_name": "08_23_18_28_41__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_29": {
+        "round_name": "08_23_18_28_41__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_30": {
+        "round_name": "08_23_18_47_06__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_31": {
+        "round_name": "08_23_18_47_06__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_32": {
+        "round_name": "08_23_18_57_23__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_33": {
+        "round_name": "08_23_18_57_23__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_34": {
+        "round_name": "08_23_19_07_59__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_35": {
+        "round_name": "08_23_19_09_11__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_36": {
+        "round_name": "08_23_19_10_23__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_37": {
+        "round_name": "08_23_19_11_40__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_38": {
+        "round_name": "08_23_19_13_13__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_39": {
+        "round_name": "08_23_19_14_45__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_40": {
+        "round_name": "08_23_19_16_12__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_41": {
+        "round_name": "08_23_19_16_12__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_42": {
+        "round_name": "08_23_19_17_58__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_43": {
+        "round_name": "08_23_19_17_58__red_light__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_44": {
+        "round_name": "08_23_19_23_50__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_45": {
+        "round_name": "08_23_19_23_50__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_46": {
+        "round_name": "08_23_19_26_15__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_47": {
+        "round_name": "08_23_19_26_44__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_48": {
+        "round_name": "08_23_19_26_44__vehicle_blocked__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_49": {
+        "round_name": "08_23_19_31_20__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_50": {
+        "round_name": "08_23_19_31_47__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_51": {
+        "round_name": "08_23_19_51_00__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_52": {
+        "round_name": "08_23_19_52_17__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_53": {
+        "round_name": "08_23_19_52_17__vehicle_blocked__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_54": {
+        "round_name": "08_23_20_02_54__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_55": {
+        "round_name": "08_23_20_02_54__vehicle_blocked__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_56": {
+        "round_name": "08_23_20_09_49__collisions_vehicle__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_57": {
+        "round_name": "08_23_20_09_49__vehicle_blocked__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_58": {
+        "round_name": "08_23_20_16_16__collisions_vehicle__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_59": {
+        "round_name": "08_23_20_16_16__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_60": {
+        "round_name": "08_23_20_28_23__red_light__tpre4_tpost2",
+        "left": "agent2",
+        "right": "agent1",
+        "human_label": 0
+    },
+    "r_61": {
+        "round_name": "08_23_20_29_13__red_light__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    },
+    "r_62": {
+        "round_name": "08_23_20_30_01__red_light__tpre4_tpost2",
+        "left": "agent1",
+        "right": "agent2",
+        "human_label": 1
+    }
+}
